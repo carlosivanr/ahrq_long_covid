@@ -273,10 +273,6 @@ management = management.merge(
         )
 )
 
-management.loc[
-    pd.to_datetime(management["consent_date"]) < "2026-09-01",
-    :
-]
 
 # /////////////////////////// PASC Complete columns ///////////////////////////
 # Create a new column, if record id is in t1 completed ids, set to Yes
@@ -295,6 +291,8 @@ management["current_enroll_status"] = (
 # Set a tuple with the name of the RedCap event, the respective time stamp 
 # field, and the output column name. These will be fed into a subsequent 
 # for-loop to merge in the PASC time stamp dates if available.
+
+
 date_fields = [
     ("consent_and_t1_sur_arm_1", "pasc_symptoms_and_followup_questions_timestamp",    "t1_pasc_date"),
     ("t2_survey_arm_1",          "pasc_symptoms_only_t2_t4_timestamp",                "t2_pasc_date"),
