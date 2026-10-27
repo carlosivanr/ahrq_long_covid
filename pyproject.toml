@@ -1,0 +1,30 @@
+[project]
+name = "redcap-pipeline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Carlos Rodriguez", email = "carlos.i.rodriguez@cuanschutz.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "dfm-tb",
+    "great-tables>=1.1.0",
+    "ipykernel>=7.4.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.11.2",
+    "pandas>=3.0.6",
+    "requests>=2.34.2",
+    "seaborn>=0.13.2",
+    "tableone>=0.9.6",
+]
+
+[project.scripts]
+patient-pipeline = "patient_pipeline:main"
+
+[tool.uv]
+package = false
+link-mode = "copy"
+
+[tool.uv.sources]
+dfm-tb = { git = "https://github.com/carlosivanr/dfm_tb" }
