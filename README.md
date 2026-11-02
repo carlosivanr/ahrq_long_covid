@@ -29,8 +29,8 @@ The following environment variables must be set before running the pipeline:
 
 | Script | Description |
 |---|---|
-| `patient-pipeline/extract_patient_deidentified.py` | Extracts de-identified patient records from REDCap |
-| `patient-pipeline/extract_patient_survey.py` | Extracts patient survey responses from REDCap |
+| `patient-pipeline/extract/deidentified_patient/extract_patient_deidentified.py` | Extracts de-identified patient records from REDCap |
+| `patient-pipeline/extract/patient_survey/extract_patient_survey.py` | Extracts patient survey responses from REDCap |
 | `patient-pipeline/transform/enrollment_management.py` | Transforms and manages enrollment data |
 
 ## Data

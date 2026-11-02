@@ -28,15 +28,25 @@ data["record_id"] = pd.to_numeric(data["record_id"])
 # These events serve as the primary rows for managing participant enrollment.
 management = data.loc[
     data["redcap_event_name"].isin([
-        "patient_preenrollm_arm_1",
-        "screening_and_enro_arm_1"
+        "patient_preenrollm",
+        "screening_and_enro"
     ])
 ].copy()
 
 # Select the columns from the first two redcap events
-management = management.loc[
-    :, "record_id":"patient_enrollment_form_complete"
-]
+management = pd.concat(
+    [management.loc[:, "record_id":"patient_enrollment_form_complete"],
+     management.loc[:, "site_name"]],
+     axis = 1)
+
+# Fill in site name
+management["site_name"] = (
+    management.groupby("record_id")["site_name"]
+    .transform(lambda s: s.bfill())
+)
+
+# Set missing values in site_name to "Unknown"
+management["site_name"] = management["site_name"].fillna("Unknown")
 
 
 # //////////////////////////////// Exclusions ////////////////////////////////
@@ -184,7 +194,7 @@ enrollment_comp_ids = management.loc[
 # subsequent T2 through T5 surveys. Those with a missing T1 PASC are reverted
 # to not enrolled regardless of consent and prior enrollment status
 t1_pasc_comp_ids = data.loc[
-    (data["redcap_event_name"] == "consent_and_t1_sur_arm_1")
+    (data["redcap_event_name"] == "consent_and_t1_sur")
     &
     (data["pasc_symptoms_and_followup_questions_complete"] == "Complete"),
     "record_id"
@@ -240,7 +250,7 @@ management["outreach_count"] = (
 # ////////////////////////////// Consent Column ///////////////////////////////
 # Create a new column, if patient consented at t1 
 t1_consented_ids = data.loc[
-    (data["redcap_event_name"] == "consent_and_t1_sur_arm_1")
+    (data["redcap_event_name"] == "consent_and_t1_sur")
     &
     (~data["consent_name"].isna()),
     "record_id"
@@ -254,7 +264,7 @@ management["consented"] = (
 
 
 consent_timestamps = data.loc[
-    (data["redcap_event_name"] == "consent_and_t1_sur_arm_1")
+    (data["redcap_event_name"] == "consent_and_t1_sur")
     &
     (~data["consent_name"].isna()),
     ["record_id", "patient_consent_form_timestamp"]
@@ -294,11 +304,11 @@ management["current_enroll_status"] = (
 
 
 date_fields = [
-    ("consent_and_t1_sur_arm_1", "pasc_symptoms_and_followup_questions_timestamp",    "t1_pasc_date"),
-    ("t2_survey_arm_1",          "pasc_symptoms_only_t2_t4_timestamp",                "t2_pasc_date"),
-    ("t3_survey_arm_1",          "pasc_symptoms_only_t2_t4_timestamp",                "t3_pasc_date"),
-    ("t4_survey_arm_1",          "pasc_symptoms_only_t2_t4_timestamp",                "t4_pasc_date"),
-    ("t5_survey_arm_1",          "pasc_symptoms_and_followup_questions_t5_timestamp", "t5_pasc_date")
+    ("consent_and_t1_sur", "pasc_symptoms_and_followup_questions_timestamp",    "t1_pasc_date"),
+    ("t2_survey",          "pasc_symptoms_only_t2_t4_timestamp",                "t2_pasc_date"),
+    ("t3_survey",          "pasc_symptoms_only_t2_t4_timestamp",                "t3_pasc_date"),
+    ("t4_survey",          "pasc_symptoms_only_t2_t4_timestamp",                "t4_pasc_date"),
+    ("t5_survey",          "pasc_symptoms_and_followup_questions_t5_timestamp", "t5_pasc_date")
 ]
 
 # Since the master data contains all records, this for-loop filters to only
