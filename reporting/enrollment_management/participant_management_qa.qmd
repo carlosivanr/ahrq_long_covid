@@ -4,6 +4,7 @@ date: today
 format: 
   html:
     embed-resources: true
+    toc: true
 
 execute: 
   echo: false
@@ -17,9 +18,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from dfm_tb.tables import py_summary
 from great_tables import GT, loc, style
 from matplotlib.patches import FancyBboxPatch
-from dfm_tb.tables import py_summary
 ```
 
 ```{python}

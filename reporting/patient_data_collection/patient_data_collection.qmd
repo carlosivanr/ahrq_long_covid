@@ -1,0 +1,80 @@
+---
+title: "AHRQ Long COVID: Patient Data Collection Tables"
+
+date: today
+
+format: 
+  docx:
+    toc: true
+    embed-resources: true
+    reference-doc: "D:/custom-reference-doc.docx"
+
+execute: 
+  echo: false
+---
+
+```{python}
+# /////////////////////////////////////////////////////////////////////////////
+
+# /////////////////////////////////////////////////////////////////////////////
+```
+
+```{python}
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+# from dfm_tb.tables import freq_prop
+```
+
+# RedCap Project ID 35013: Site by Study Approaches (De-Identified Data Responses)
+```{python}
+file_path = max(Path("./patient-pipeline/data/raw/patient_deidentified/").glob("*.csv"))
+
+data = pd.read_csv(file_path)
+```
+
+```{python}
+data %>%
+  select(practicename, outcome) %>% 
+  mutate(outcome = fct_na_value_to_level(outcome, level = "Missing")) %>%
+  tbl_summary(by = outcome) %>%
+  add_overall()
+```
+
+
+```{python}
+df = data.loc[:, ["practicename", "outcome"]]
+```
+
+
+```{python}
+py_summary_by(data.loc[:, ["gender", "outcome", "practicename"]], "practicename")
+```
+
+```{python}
+py_summary_by(data.loc[:, ["outcome", "gender", "practicename"]], "practicename")
+```
+
+\newpage
+
+<!-- ////////////////////////////////////////////////////////////////////// -->
+
+# RedCap Project ID 25710: Site by Patient Enrollment Status
+```{python}
+# Loads and processes RedCap Project ID 25710 data (longitudinal data) for the 
+# 2nd table in this report
+source("d:/long_covid/scripts/functions/prep_redcap_data.R")
+```
+
+```{python}
+data %>%
+  filter(redcap_event_name == "screening_and_enro_arm_1") %>%
+  mutate(enrollstatus = 
+    fct_na_value_to_level(factor(enrollstatus), level = "Missing")) %>%
+  select(enrollstatus, site_name) %>%
+  tbl_summary(by = enrollstatus) %>%
+  add_overall()
+```
