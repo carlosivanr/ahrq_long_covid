@@ -1,0 +1,70 @@
+---
+title: "Patient Survey Accrual Report Version 3"
+date: today
+
+format: 
+  docx:
+    toc: true
+    embed-resources: true
+    reference-doc: "D:/custom-reference-doc.docx"
+
+execute: 
+  echo: false
+  warning: false
+---
+
+
+```{python}
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+# from dfm_tb.tables import freq_prop
+```
+
+
+```{python}
+file_path = max(Path("./patient-pipeline/data/clean/management").glob("*.csv"))
+
+data = pd.read_csv(file_path)
+```
+
+```{python}
+data.loc[:, ["site_name"]]
+```
+
+
+# Survey completion rates by time point
+•	denominator consists of unique records where patient_consent_form is complete
+•	status determined by whether or not PASC is submitted
+
+## T1
+```{python}
+freq_prop(
+  data.loc[data["consented"] == "Yes", :],
+  "t1_pasc_complete"
+)
+```
+
+```{python}
+py_summary(
+  data.loc[:, ["consented"]]
+)
+```
+
+```{python}
+summarize(
+  data,
+  "days_since_t1"
+)
+```
+
+## T2
+```{python}
+freq_prop(
+  data.loc[data["consented"] == "Yes", :], 
+  "t2_status"
+)
+```

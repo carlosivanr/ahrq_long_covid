@@ -1,0 +1,257 @@
+---
+title: "Participant Enrollment Management Data QA"
+date: today
+format: 
+  html:
+    embed-resources: true
+
+execute: 
+  echo: false
+  warning: false
+---
+
+```{python}
+# import os
+# from datetime import datetime
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+from great_tables import GT, loc, style
+from matplotlib.patches import FancyBboxPatch
+from dfm_tb.tables import py_summary
+```
+
+```{python}
+
+```
+
+```{python}
+# Set the file path to the most recently available management.csv file
+file_path = max(Path("d:/ahrq_long_covid/patient-pipeline/data/clean/management").glob("*.csv"))
+
+# Import all columns as string
+data = pd.read_csv(file_path, dtype="string")
+```
+
+# Current data file
+```{python}
+print(file_path)
+```
+
+# Current Enrollment Status
+```{python}
+# Display a table of where the participants are at
+counts = data["current_enroll_status"].value_counts(dropna=False)
+
+summary = pd.DataFrame({
+    "Count": counts,
+    "Percent": counts / counts.sum()
+})
+
+# Add a row where the total counts and percentage are shown
+summary.loc["Total"] = [summary["Count"].sum(), 1]
+
+
+(GT(summary
+    .reset_index())
+.fmt_percent(columns = "Percent", decimals = 1)
+.cols_label(current_enroll_status="Current Enroll Status")
+.tab_style(
+    style=style.text(weight="bold"),
+    locations = loc.column_labels()
+)
+)
+```
+
+# Participants marked as TBD
+- For patients that are classified as TBD, display their record id, pre-enrollment date, and additional fields.
+- Display the number and dates of outreach attempts for these patients
+```{python}
+(data.loc[
+  data["current_enroll_status"] == "TBD",
+  ["record_id", 
+  "patient_preenrollment_contact_information_timestamp",
+  "study_label",
+  "enrollstatus",
+  "not_enrolled_status",
+  "othernotes"
+  ]
+]
+.reset_index(drop=True)
+.rename(columns = {"patient_preenrollment_contact_information_timestamp": "pre-enroll_timestamp"})
+)
+```
+
+<!-- # Data quality checks -->
+<!-- - subset of individuals where the study_label field contains "No response". Inconsistencies in how data are maintained.
+- record_ids 4 through 57 have good data quality. No missing values
+- record_ids 66-99, 103-120, and 133-139 have poor data quality. Each row has at least one missing value in a field that is used determine a participant's final enrollment status.
+- In the table above, notice how record_id 139 is marked as TBD (indicating the study team has yet to determine eligibility). This is because enrollstatus and not_enrolled_status fields are missing. However, the study label shows "No response." The current code base will not "classify" these folks correctly and cause inaccurate counting. -->
+```{python}
+# no_response = data.loc[
+#     data["study_label"].str.contains("No Response", case=False, na=False),
+#     ["record_id", "study_label", "enrollstatus", "not_enrolled_status"]
+# ]
+
+# display(no_response)
+```
+
+```{python}
+# Filter the data to display
+tbd = data.loc[
+  data["current_enroll_status"] == "TBD"
+]
+
+outreach_cols = tbd.loc[:, "date_outreach":"date_outreach_5"].columns
+
+# Convert dates to datetime
+dates = tbd.set_index("record_id")[outreach_cols].apply(
+    pd.to_datetime, errors="coerce"
+)
+
+heatmap_data = dates.notna().astype(int)
+
+# Create date labels (MM/DD), leaving missing values blank
+date_labels = dates.apply(
+    lambda col: col.dt.strftime("%m/%d").fillna("")
+)
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(10, max(5, len(tbd) * 0.35)))
+
+# Draw rounded tiles
+for i in range(heatmap_data.shape[0]):
+    for j in range(heatmap_data.shape[1]):
+
+        filled = heatmap_data.iloc[i, j] == 1
+
+        color = "#2A9D8F" if filled else "#F0F0F0"
+
+        tile = FancyBboxPatch(
+            (j + 0.05, i + 0.05),
+            0.90,
+            0.90,
+            boxstyle="round,pad=0,rounding_size=0.08",
+            linewidth=0,
+            facecolor=color
+        )
+
+        ax.add_patch(tile)
+
+        # Add dates inside completed tiles
+        if filled:
+            ax.text(
+                j + 0.5,
+                i + 0.5,
+                date_labels.iloc[i, j],
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="white"
+            )
+
+# Configure axes
+ax.set_xlim(0, heatmap_data.shape[1])
+ax.set_ylim(heatmap_data.shape[0], 0)
+
+# Center ticks over tiles
+ax.set_xticks(
+    [i + 0.5 for i in range(heatmap_data.shape[1])]
+)
+ax.set_xticklabels(range(1, heatmap_data.shape[1] + 1))
+
+ax.set_yticks(
+    [i + 0.5 for i in range(heatmap_data.shape[0])]
+)
+ax.set_yticklabels(heatmap_data.index)
+
+ax.tick_params(length=0)
+ax.set_aspect("auto")
+
+ax.set_xlabel("Outreach Attempt")
+ax.set_ylabel("Record ID")
+ax.set_title("Participant Outreach Tracking")
+
+for spine in ax.spines.values():
+    spine.set_visible(False)
+
+plt.tight_layout()
+plt.show()
+```
+
+# Participants where verification is needed
+- Verification is to be entered in ./patient-pipeline/config/record_excludsions.csv
+
+```{python}
+file_path = max(Path("d:/ahrq_long_covid/patient-pipeline/data/validation").glob("*.csv"))
+
+# Import all columns as string
+unverified_data = pd.read_csv(file_path, dtype="string")
+```
+
+```{python}
+if len(unverified_data) > 0:
+    unverified_data[["record_id", "name", "email", "study_label", "enrollstatus", "not_enrolled_status", "othernotes"]]
+else:
+    print("No records require verification.")
+
+```
+
+
+# PASC status by time point
+```{python}
+# Source the function
+# exec(open("D:/ahrq_long_covid/functions/py_summary.py").read())
+
+# create a data frame to pass to the table generating function
+df = data.loc[
+    data["consented"] == "Yes", 
+    ["t1_pasc_complete", "t2_status", "t3_status", "t4_status", "t5_status"]
+    ]
+
+# Unordered tbl_summary
+py_summary(df)
+```
+
+# PASC completion rates figure
+- Denominator for T1 is the number of patients who consented
+- Each subsequent denominator (T3:T5) is the number of patients that have been enrolled long enough to receive an invite at each corresponding timepoint and consented.
+- At any given timepoint, there may be patients who have been invited, but are within a grace period to submit a survey. These individuals are set to "Due for t*". As a result, completion rates at T2:T5 can be considered as slightly conservative estimates.
+```{python}
+# Create a subset
+response_rates = data.loc[data["consented"] == "Yes", :]
+
+t1 = response_rates["t1_pasc_complete"].value_counts(normalize = True)
+
+# Complete
+t2 = response_rates.loc[response_rates["t2_status"] != "Not Due", "t2_status"].value_counts(normalize = True)
+
+t3 = response_rates.loc[response_rates["t3_status"] != "Not Due", "t3_status"].value_counts(normalize = True)
+
+t4 = response_rates.loc[response_rates["t4_status"] != "Not Due", "t4_status"].value_counts(normalize = True)
+
+t5 = response_rates.loc[response_rates["t5_status"] != "Not Due", "t5_status"].value_counts(normalize = True)
+```
+
+```{python}
+x = [1, 2, 3, 4, 5]
+y = [float(t1.iloc[0]), float(t2.iloc[0]), float(t3.iloc[0]), float(t4.iloc[0]), float(t5.iloc[0])]
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.plot(x, y, marker="o", color="steelblue", linewidth=2, markersize=8)
+
+for xi, yi in zip(x, y):
+    ax.annotate(f"{yi:.1%}", xy=(xi, yi), xytext=(0, 15),
+                textcoords="offset points", ha="center", fontsize=10)
+
+ax.set_xlabel("Timepoint")
+ax.set_ylabel("Proportion Complete")
+ax.set_xticks(x)
+ax.set_ylim(0.6, 1.05)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+ax.set_title("PASC Completion Rate by Timepoint")
+plt.tight_layout()
+plt.show()
+```

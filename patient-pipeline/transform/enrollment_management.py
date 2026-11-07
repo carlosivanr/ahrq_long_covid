@@ -363,11 +363,11 @@ for delta, new_col in pasc_status:
     default=pd.NA
 )
 
-# The columns created in the prior step are modified, so that if a date is
+# The columns created in the prior step are modified so that if a date is
 # present in the t*_pasc_date columns, then the status is modified to
-# "Complete". Having a t*_pasc_date indicates that the patient submitted a
+# "Complete". Having a t*_pasc_date indicates that the patient submitted
 # that instrument whereas missing values indicate there was no submission
-# i.e. a missing instrument. 
+# i.e. a missing instrument.
 pasc_complete = [
     ("t2_pasc_date", "t2_status"),
     ("t3_pasc_date", "t3_status"),
@@ -381,6 +381,24 @@ for date, status in pasc_complete:
     "Complete",
     management[status]
 )
+
+# For those that did not complete a PASC, where t1_pasc_complete == No, set the
+# subsequent  status columns to Incomplete
+no_t2_t5_invite_ids = management.loc[
+    (~management["consent_date"].isna()) & (management["t1_pasc_complete"] == "No"),
+    "record_id"
+]
+
+t1_pasc_incomplete_cols = [
+    "t2_status",
+    "t3_status",
+    "t4_status",
+    "t5_status"]
+
+
+management.loc[
+    management["record_id"].isin(no_t2_t5_invite_ids), 
+    t1_pasc_incomplete_cols] = "T1 Incomplete"
 
 
 # /////////////// Identify those that have been lost to followup //////////////
